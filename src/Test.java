@@ -1,20 +1,20 @@
 public class Test {
     public static void main(String[] args) {
         Matrix m = new Matrix(3, 3);
-        Matrix n = new Matrix(1, 3);
+        Matrix n = new Matrix(2, 4);
         double[][] entryOne = {
-                {-3, 5, 2},
-                {2, -4,-1},
-                {-3, 0, 6}
+                {1, 2, 0},
+                {3, -1, 2},
+                {-2, 3, -2}
 
         };
         double[][] entryTwo = {
-                {-1, 2, 5},
+                {1.0, 1.0, 1.0, 0.0},
+                {2.0, 4.0, 0.0, 1.0}
         };
         m.setEntries(entryOne);
         n.setEntries(entryTwo);
-        System.out.println(m.calculateDeterminant());
-        System.out.println(m.gaussianElimination());
-        System.out.print(Matrix.identity(5));
+        System.out.println(m.findInverse());
+        System.out.print(n.gaussJordan());
     }
 }

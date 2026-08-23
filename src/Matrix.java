@@ -86,6 +86,18 @@ public class Matrix {
         return totalMatrix.toString();
     }
 
+    public boolean equals(Matrix other) {
+        boolean isEquals = true;
+        for (int i = 1 ; i <= row ; i++) {
+            for (int j = 1 ; j <= column ; j++) {
+                if (this.getEntry(i, j) != other.getEntry(i,j)) {
+                    isEquals = false;
+                }
+            }
+        }
+        return isEquals;
+    }
+
     public Matrix scale(double scalar)
     {
         Matrix scalarMultiple = new Matrix(this.row, this.column);
@@ -198,11 +210,22 @@ public class Matrix {
 
      //Gaussian Elimination Algorithms
 
-    public boolean columnIsZero(int column) {
+    public boolean columnIsZero(int row, int column) {
         boolean isZero = true;
-        for (int i = 1 ; i <= this.row ; i++) {
-            if (this.getEntry(i, column) != 0) {
+        for (int i = row ; i <= this.row ; i++) {
+            if (Math.abs(this.getEntry(i, column)) > epsilon) {
                 isZero = false;
+            }
+        }
+        return isZero;
+    }
+
+    public boolean rowIsZero(int row, int column) {
+        boolean isZero = true;
+        for (int i = column ; i <= this.column ; i++) {
+            if (Math.abs(this.getEntry(row, i)) > epsilon) {
+                isZero = false;
+                break;
             }
         }
         return isZero;
@@ -211,71 +234,145 @@ public class Matrix {
     //Errors IF there is a zero row
 
     public Matrix gaussianElimination() {
-        int l = 1;
-        while (l <= this.row) {
-            int i = l;
-            while (i <= this.column) {
-                if (columnIsZero(i)) {
+        Matrix ref = new Matrix(this.row, this.column);
+        ref.setEntries(this);
+        int r = 1;
+        int c = 1;
+        while (r <= ref.getRow() && c <= ref.getColumn()) {
+            int i = c;
+            while (i <= ref.getColumn()) {
+                if (ref.columnIsZero(r, i)) {
                     i++;
-                } else {
+                    if (i > ref.getColumn()) {
+                        return ref;
+                    }
+                }
+                else {
                     break;
                 }
             }
-
-            for (int j = l; j <= this.row; j++) {
-                if (Math.abs(this.getEntry(j, i)) > epsilon) {
-                    swap(l, j);
-                    rowScale(l, 1 / getEntry(l, i));
-                    break;
+            ref.partialPivot(r, i);
+            ref.rowScale(r, 1 / ref.getEntry(r, i));
+            if (r + 1 <= ref.getRow()) {
+                for (int j = r + 1; j <= ref.getRow() ; j ++) {
+                    ref.rowReplace(j, r, -1 * ref.getEntry(j, i));
                 }
             }
+            r++;
+            c = i + 1;
+        }
+        return ref;
+    }
 
-            for (int k = l + 1; k <= this.row; k++) {
-                rowReplace(k, l, -1 * getEntry(k, i));
+    public Matrix partialPivot(int row, int column) {
+        double maxValue = this.getEntry(row, column);
+        int maxRow = row;
+        for (int i = row ; i <= this.row ; i++) {
+            if (Math.abs(this.getEntry(i, column)) > Math.abs(maxValue)) {
+                maxValue = this.getEntry(i, column);
+                maxRow = i;
             }
-            l++;
+        }
+        swap(row, maxRow);
+        return this;
+    }
+
+
+    public Matrix zeroesAllBelow() {
+        int i = 1;
+        int j = this.row;
+        while(i < j) {
+
+            if (!this.rowIsZero(i, 1)) {
+                i++;
+            }
+            if (this.rowIsZero(j, 1)) {
+                j--;
+            }
+            else if (this.rowIsZero(i, 1) && !this.rowIsZero(j, 1)) {
+                swap(i, j);
+            }
         }
         return this;
     }
 
-    public double calculateDeterminant() {
-        if (this.row != this.column) {
-            throw new IllegalArgumentException("Matrix is not square");
+    public int findMaxLeftRow(int row, int column) {
+        int targetRow = row;
+        int targetColumn = -1;
+        double maxValue = 0;
+        for (int i = column ; i <= this.column ; i++) {
+            if (!this.columnIsZero(row, i)) {
+                targetColumn = i;
+                break;
+            }
         }
-        Matrix triangularMatrix = new Matrix(this.row, this.column);
-        triangularMatrix.setEntries(this.matrix);
-        int l = 1;
-        int swapCounter = 0;
-        double scaleFactor = 1;
-        while (l <= triangularMatrix.getRow()) {
-            int i = l;
-            while (i <= triangularMatrix.getColumn()) {
-                if (columnIsZero(i)) {
+        if (targetColumn == -1) {
+            return targetColumn;
+        }
+        else {
+            for (int j = column ; j <= this.row ; j++) {
+                if (Math.abs(this.getEntry(j, targetColumn)) > Math.abs(maxValue)) {
+                    maxValue = this.getEntry(j, targetColumn);
+                    targetRow = j;
+                }
+            }
+        }
+        return targetRow;
+    }
+
+    public int findFirstNonZeroColumn(int row) {
+        int targetColumn = -1;
+        for (int i = 1 ; i <= this.column ; i++) {
+            if (this.getEntry(row, i) != 0) {
+                targetColumn = i;
+            }
+        }
+        return targetColumn;
+    }
+
+    public Matrix gaussJordan() {
+        Matrix rref = new Matrix(this.row, this.column);
+        rref.setEntries(this);
+        rref.zeroesAllBelow();
+        int c = 1;
+        int r = 1;
+        while (c <= rref.getColumn() && r <= rref.getRow()) {
+            int i = c;
+            while (i <= rref.getColumn()) {
+                if (rref.columnIsZero(r, i)) {
                     i++;
-                } else {
-                    break;
-                }
-            }
-
-            for (int j = l; j <= triangularMatrix.getRow(); j++) {
-                if (Math.abs(triangularMatrix.getEntry(j, i)) > epsilon) {
-                    if (l != j) {
-                        swap(l, j);
-                        swapCounter++;
+                    if (i > rref.getColumn()) {
+                        return rref;
                     }
-                    scaleFactor *= triangularMatrix.getEntry(l, i);
-                    rowScale(l, 1 / triangularMatrix.getEntry(l, i));
+                }
+                else {
                     break;
                 }
             }
-
-            for (int k = l + 1; k <= this.row; k++) {
-                rowReplace(k, l, -1 * triangularMatrix.getEntry(k, i));
+            rref.partialPivot(r, i);
+            rref.rowScale(r, 1.0 / rref.getEntry(r, i));
+            for (int j = 1 ; j <= rref.getRow() ; j++) {
+                if (j != r) {
+                    rref.rowReplace(j, r, -1.0 * rref.getEntry(j, i));
+                }
             }
-            l++;
+            r++;
+            c = i + 1;
         }
-        double determinant = 1;
-        return determinant * scaleFactor * Math.pow(-1, swapCounter);
+        return rref;
+    }
+
+    public Matrix findInverse() {
+        Matrix identityAugmented = new Matrix(this.row, 2 * this.column);
+        identityAugmented.setEntries(augment(Matrix.identity(this.row)));
+        identityAugmented = identityAugmented.gaussJordan();
+        Matrix inverse = new Matrix(this.row, this.column);
+        for (int i = 1 ; i <= this.row ; i++) {
+            for (int j = 1 ; j <= this.column ; j++) {
+                inverse.setEntries(i, j, identityAugmented.getEntry(i, j + this.column));
+            }
+        }
+        return inverse;
     }
 
 }
