@@ -2,6 +2,8 @@ import java.lang.Math;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
 
 public class Matrix {
     private int row;
@@ -155,6 +157,17 @@ public class Matrix {
         return transpose;
      }
 
+     public Matrix fill(double entry) {
+         for (int i = 1 ; i <= this.row ; i++)
+         {
+             for (int j = 1 ; j <= this.column; j++)
+             {
+                 this.setEntries(i, j, entry);
+             }
+         }
+         return this;
+     }
+
      //Elementary Row Operations
 
      public Matrix swap(int row1, int row2) {
@@ -277,6 +290,19 @@ public class Matrix {
         return this;
     }
 
+    //Method to see which row is swapped for
+    public static int partialPivotMaxRow(Matrix matrix, int row, int column) {
+        double maxValue = matrix.getEntry(row, column);
+        int maxRow = row;
+        for (int i = row ; i <= matrix.row ; i++) {
+            if (Math.abs(matrix.getEntry(i, column)) > Math.abs(maxValue)) {
+                maxValue = matrix.getEntry(i, column);
+                maxRow = i;
+            }
+        }
+        return maxRow;
+    }
+
 
     public Matrix zeroesAllBelow() {
         int i = 1;
@@ -375,4 +401,153 @@ public class Matrix {
         return inverse;
     }
 
+    public boolean isStochastic() {
+        if (this.row != this.column) {
+            throw new IllegalArgumentException("Stochastic matrices must be n x n");
+        }
+        for (int i = 1 ; i <= this.row ; i++) {
+            double columnSum = 0;
+            for (int j = 1 ; j <= this.column ; j++) {
+                columnSum += this.getEntry(j, i);
+            }
+            if (columnSum - 1 > epsilon) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean hasZeroEntry() {
+        for (int i = 1 ; i <= this.row ; i++) {
+            for (int j = 1 ; j <= this.column ; j++) {
+                if (this.getEntry(i, j) == 0.0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isRegularStochastic() {
+        if (!this.isStochastic()) {
+            throw new IllegalArgumentException("Matrix is not stochastic");
+        }
+        Matrix regularCheck = new Matrix(this.row, 2 * this.column);
+        Matrix exponentFactor = new Matrix(this.row, 2 * this.column);
+        regularCheck.setEntries(this);
+        exponentFactor.setEntries(this);
+        if (!regularCheck.hasZeroEntry()) {
+            return true;
+        }
+        for (int i = 1 ; i <= (regularCheck.getRow() - 1) * (regularCheck.getRow() - 1) + 1 ; i++) {
+            regularCheck.setEntries(regularCheck.multiply(exponentFactor));
+            if (!regularCheck.hasZeroEntry()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Matrix steadyStateMatrix(Matrix matrix) {
+        if (!matrix.isStochastic()) {
+            throw new IllegalArgumentException("Matrix must be stochastic!");
+        }
+        Matrix nthSteadyState = new Matrix(matrix.getRow() + 1, matrix.getColumn());
+        Matrix columnMatrix = new Matrix(matrix.getRow() + 1, 1);
+        columnMatrix.fill(1);
+        nthSteadyState.setEntries(matrix.multiply(columnMatrix));
+        for (int i = 1 ; i < matrix.getColumn() ; i++) {
+            nthSteadyState.setEntries(matrix.getRow(), i, 1);
+        }
+        nthSteadyState.setEntries(nthSteadyState.augment(columnMatrix));
+        return nthSteadyState;
+        //add a solve feature
+    }
+
+    public static boolean checkIfElementary(Matrix matrix) {
+        if (matrix.getRow() != matrix.getColumn()) {
+            throw new IllegalArgumentException("Elementary matrices are n x n");
+        }
+        Matrix compare = new Matrix(matrix.getRow(), matrix.getColumn());
+        compare.setEntries(matrix.subtract(Matrix.identity(matrix.getRow())));
+        int nonZeroCounter = 0;
+        for (int i = 1 ; i <= compare.getRow() ; i++) {
+            for (int j = 1 ; j <= compare.getColumn() ; j++) {
+                if (Math.abs(compare.getEntry(i, j)) > epsilon) {
+                    nonZeroCounter++;
+                }
+            }
+        }
+        if (nonZeroCounter == 0) {
+            return true;
+        }
+        else if (nonZeroCounter == 1) {
+                for (int i = 1 ; i <= compare.getColumn() ; i++) {
+                    if (Math.abs(matrix.getEntry(i, i)) < epsilon) {
+                        return false;
+                    }
+                }
+            return true;
+        }
+        else if (nonZeroCounter == 4) {
+            for (int i = 1 ; i <= compare.getRow() ; i++) {
+                for (int j = 1 ; j <= compare.getColumn() ; j++) {
+                    if (Math.abs(compare.getEntry(i, j)) - 1.0 > epsilon) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public static int findOriginalRow(ArrayList<Integer> rowTracker, Integer target) {
+        for (int i = 0 ; i < rowTracker.size(); i+= 2) {
+            if (rowTracker.get(i + 1).equals(target)) {
+                return rowTracker.get(i);
+            }
+        }
+        throw new IllegalArgumentException("No such target found");
+    }
+
+    //Only works for squares for now
+    public static Matrix[] luDecomposition(Matrix matrix) {
+        ArrayList<Matrix> elementaryMatrixTracker = new ArrayList<>(0);
+        int r = 1;
+        int c = 1;
+        while (r <= matrix.getRow() && c <= matrix.getColumn()) {
+            int i = c;
+            outerloop: while (i <= matrix.getColumn()) {
+                if (matrix.columnIsZero(r, i)) {
+                    i++;
+                    if (i > matrix.getColumn()) {
+                        break outerloop;
+                    }
+                }
+                else {
+                    break;
+                }
+            }
+            if (r + 1 <= matrix.getRow()) {
+                for (int j = r + 1; j <= matrix.getRow() ; j ++) {
+                    elementaryMatrixTracker.add(Matrix.identity(matrix.getRow()).rowReplace(j, r, -1 * matrix.getEntry(j, i) / matrix.getEntry(r, i)));
+                    matrix.rowReplace(j, r, -1 * matrix.getEntry(j, i) / matrix.getEntry(r, i));
+                }
+            }
+            r++;
+            c = i + 1;
+        }
+        Matrix L = new Matrix(matrix.getRow(), matrix.getColumn());
+        L.setEntries(elementaryMatrixTracker.getFirst().findInverse());
+        for (int i = 1 ; i < elementaryMatrixTracker.size() ; i++) {
+            L.setEntries(L.multiply(elementaryMatrixTracker.get(i).findInverse()));
+        }
+        Matrix[] LU = new Matrix[2];
+        LU[0] = L;
+        LU[1] = matrix;
+        return LU;
+    }
 }
