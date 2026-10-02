@@ -1,19 +1,23 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Test {
     public static void main(String[] args) {
-        Matrix test = new Matrix(2, 2);
-        Matrix L = new Matrix(3, 3);
+        Matrix test = new Matrix(4, 4);
+        Matrix L = new Matrix(4, 1);
         Matrix U = new Matrix(3, 3);
         double[][] entryOne = {
-                {2,1},
-                {4, 2}
+                {0, 1, 1, -2},
+                {1, 2, -1, 0},
+                {2, 4, 1, -3},
+                {1, -4, -7, -1}
 
         };
         double[][] entryTwo = {
-                {1, 0, 0},
-                {0, 1, 0},
-                {2, -4, 1}
+                {-3},
+                {2},
+                {-2},
+                {-19}
         };
         double[][] entryThree= {
                 {1, -3, 0},
@@ -25,7 +29,8 @@ public class Test {
                 {0, 1, 3},
                 {2, -10, 2}
         };
-        test.setEntries(entryOne);
-        System.out.print(Matrix.findDeterminant(test));
+        Vector vTest = new Vector(5);
+        vTest.setComponents(0, -2, 1, 4, -2);
+        System.out.println(vTest.findLength());
     }
 }

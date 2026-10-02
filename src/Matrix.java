@@ -12,6 +12,7 @@
 import java.lang.Math;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Array;
 import java.util.Arrays;
 import java.util.ArrayList;
 
@@ -96,10 +97,12 @@ public class Matrix {
         for (int i = 0 ; i < row ; i++)
         {
             rowVector.setLength(0);
-            rowVector.append("[" + matrix[i][0]);
+            double initialValue = matrix[i][0] + 0.0;
+            rowVector.append("[" + initialValue);
             for (int j = 1 ; j < column; j++)
             {
-                rowVector.append(", " + matrix[i][j]);
+                double value = matrix[i][j] + 0.0;
+                rowVector.append(", " + value);
             }
             totalMatrix.append(rowVector + "]\n");
         }
@@ -716,5 +719,50 @@ public class Matrix {
             determinant*= matrix.getEntry(i, i);
         }
         return determinant;
+    }
+
+    public Matrix solveEquation() {
+        Matrix rref = new Matrix(this.getRow(), this.getColumn());
+        rref.setEntries(this.gaussJordan());
+        Matrix solveMatrix = new Matrix(this.getRow(), 1);
+        for(int i = 1 ; i <= this.getRow() ; i++) {
+            solveMatrix.setEntries(i, 1, rref.getEntry(i, rref.getColumn()));
+        }
+        return solveMatrix;
+    }
+
+    public int countLeadingOnes() {
+        int counter = 0;
+        for (int i = 1 ; i <= this.getRow() ; i++) {
+            innerloop: for (int j = 1 ; j <= this.getColumn() ; j++) {
+                if (Math.abs(Math.abs(this.getEntry(i, j)) - 1.0) < epsilon) {
+                    counter++;
+                    break innerloop;
+                }
+            }
+        }
+        return counter;
+    }
+
+    public int findRank() {
+        this.gaussianElimination();
+        int counter = 0;
+        for(int i = 1 ; i <= this.getRow() ; i++) {
+            if (!this.rowIsZero(i, 1)) {
+               counter++;
+            }
+        }
+        return counter;
+    }
+
+    public int findNullity() {
+        return this.getColumn() - this.findRank();
+    }
+
+    public static Matrix dotProduct(Matrix one, Matrix two) {
+        if (one.getColumn() != 1  || two.getColumn() != 1) {
+            throw new IllegalArgumentException("Matrices must be column vectors");
+        }
+        return one.transpose().multiply(two);
     }
 }
